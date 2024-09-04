@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUICKCARE- SOS System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        #map {
+            height: 60vh;
+            width: 100%;
+            max-width: 800px;
+        }
+        .container {
+            text-align: center;
+        }
+        #sos-button {
+            padding: 15px 30px;
+            font-size: 18px;
+            color: white;
+            background-color: red;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #status {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>QUICKCARE</h1>
+        <p>Press the SOS button to send an emergency alert. Your location will be displayed on the map.</p>
+        <div id="map"></div>
+        <button id="sos-button">Send SOS</button>
+        <div id="status"></div>
+    </div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
+    <script>
+        let map;
+        let userMarker;
+        let userLocation = { latitude: null, longitude: null };
+
+        // Initialize the map
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 0, lng: 0 },
+                zoom: 15,
+            });
+
+            userMarker = new google.maps.Marker({
+                map: map,
+                title: 'Your Location',
+            });
+
+            updateLocation();
+        }
+
+        // Function to get the current location
+        function updateLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition((position) => {
+                    userLocation.latitude = position.coords.latitude;
+                    userLocation.longitude = position.coords.longitude;
+                    const latLng = new google.maps.LatLng(userLocation.latitude, userLocation.longitude);
+                    map.setCenter(latLng);
+                    userMarker.setPosition(latLng);
+                    document.getElementById('status').innerText = `Current Location: Latitude ${userLocation.latitude}, Longitude ${userLocation.longitude}`;
+                }, (error) => {
+                    console.error('Error getting location:', error);
+                    document.getElementById('status').innerText = 'Unable to retrieve location.';
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 1000
+                });
+            } else {
+                document.getElementById('status').innerText = 'Geolocation is not supported by this browser.';
+            }
+        }
+
+        // Function to send SOS request
+        function sendSOS() {
+            if (userLocation.latitude && userLocation.longitude) {
+                fetch('/send_sos', { // Adjust the endpoint URL
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        latitude: userLocation.latitude,
+                        longitude: userLocation.longitude
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').innerText = 'SOS request sent successfully.';
+                })
+                .catch(error => {
+                    document.getElementById('status').innerText = 'Failed to send SOS.';
+                    console.error('Error sending SOS:', error);
+                });
+            } else {
+                document.getElementById('status').innerText = 'Unable to send SOS. Location data is missing.';
+            }
+        }
+
+        // Set up event listeners
+        document.getElementById('sos-button').addEventListener('click', sendSOS);
+
+        // Initialize the map on page load
+        window.onload = initMap;
+    </script>
+</body>
+</html>
